@@ -87,6 +87,8 @@ export async function POST(request: Request) {
 
         const ai = new GoogleGenAI({ apiKey });
 
+
+
         const prompt = `You are an AI assistant performing a defensive security review of smart contract source code provided by its developer.
 
 Review the submitted smart contract for potential security issues, logic errors, unsafe patterns, and implementation mistakes.
@@ -122,45 +124,45 @@ For every finding include:
 
 If no issues are found for a severity level, say "No significant issues identified."
 
-Also identify common implementation problems such as:
+Do not claim that the contract is completely safe.
 
-- Access control issues
-- Missing validation
-- Reentrancy risks
-- Integer or accounting logic issues
-- Incorrect token implementation
-- Approval or allowance issues
-- Unsafe external calls
-- Missing event behavior
-- Incorrect interface implementation
-- Blockchain-specific security concerns
-
-Do not claim that the contract is completely safe. State that this is an automated AI review and not a replacement for a professional security audit.
+State that this is an automated AI review and not a replacement for a professional security audit.
 
 SMART CONTRACT SOURCE CODE:
 
 ${source}`;
 
+        const models = [
+          "gemini-3.6-flash",
+          "gemini-2.5-flash",
+        ];
+
         let response;
         let lastError: unknown;
 
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            response = await ai.models.generateContent({
-              model: "gemini-3.6-flash",
-              contents: prompt,
-            });
+        for (const model of models) {
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+              response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+              });
 
-            break;
-          } catch (error) {
-            lastError = error;
+              break;
+            } catch (error) {
+              lastError = error;
 
-            if (attempt < 3) {
-              await new Promise((resolve) =>
-                setTimeout(resolve, attempt * 2000),
-              );
+              if (attempt < 3) {
+                const delay = 1000 * Math.pow(2, attempt - 1);
+
+                await new Promise((resolve) =>
+                  setTimeout(resolve, delay)
+                );
+              }
             }
           }
+
+          if (response) break;
         }
 
         if (!response) {
@@ -168,8 +170,9 @@ ${source}`;
         }
 
         send("complete", {
-          report: response.text ?? "Gemini returned no audit report.",
+          report: response.text ?? "AI returned no security report.",
         });
+        
       } catch (error) {
         send("error", {
           message: error instanceof Error ? error.message : "Audit failed.",
