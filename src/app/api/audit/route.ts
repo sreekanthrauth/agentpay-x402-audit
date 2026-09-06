@@ -87,19 +87,58 @@ export async function POST(request: Request) {
 
         const ai = new GoogleGenAI({ apiKey });
 
-        const prompt = `Audit this contract.
+        const prompt = `You are an AI assistant performing a defensive security review of smart contract source code provided by its developer.
 
-Give a short risk summary, then findings grouped by severity:
-Critical, High, Medium, Low, Informational.
+Review the submitted smart contract for potential security issues, logic errors, unsafe patterns, and implementation mistakes.
 
-For each finding:
-- Explain the security risk.
-- Explain why it matters.
-- Give a practical fix.
+The contract may be written in Solidity, TEAL, PyTeal, or another smart contract language. First identify the language and ecosystem from the code.
 
-Do not claim the code is completely safe.
+This is a defensive code review. Do not provide instructions for exploiting, attacking, stealing funds from, or abusing a contract.
 
-CONTRACT:
+Return the report in this format:
+
+## Contract Overview
+Briefly explain what the contract does and identify its language/ecosystem.
+
+## Risk Summary
+Give a short overall summary of the security and implementation risks found.
+
+## Findings
+
+Group findings by severity:
+
+### Critical
+### High
+### Medium
+### Low
+### Informational
+
+For every finding include:
+
+- **Issue**
+- **Why it matters**
+- **Affected code or function**
+- **Recommended fix**
+
+If no issues are found for a severity level, say "No significant issues identified."
+
+Also identify common implementation problems such as:
+
+- Access control issues
+- Missing validation
+- Reentrancy risks
+- Integer or accounting logic issues
+- Incorrect token implementation
+- Approval or allowance issues
+- Unsafe external calls
+- Missing event behavior
+- Incorrect interface implementation
+- Blockchain-specific security concerns
+
+Do not claim that the contract is completely safe. State that this is an automated AI review and not a replacement for a professional security audit.
+
+SMART CONTRACT SOURCE CODE:
+
 ${source}`;
 
         let response;
