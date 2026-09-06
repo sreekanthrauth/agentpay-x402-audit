@@ -3,11 +3,7 @@ import algosdk from "algosdk";
 
 export const runtime = "nodejs";
 
-const algod = new algosdk.Algodv2(
-  "",
-  "https://testnet-api.algonode.cloud",
-  ""
-);
+const algod = new algosdk.Algodv2("", "https://testnet-api.algonode.cloud", "");
 
 export async function POST(request: Request) {
   const encoder = new TextEncoder();
@@ -16,7 +12,7 @@ export async function POST(request: Request) {
     async start(controller) {
       function send(event: string, payload: Record<string, string> = {}) {
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ event, ...payload })}\n\n`)
+          encoder.encode(`data: ${JSON.stringify({ event, ...payload })}\n\n`),
         );
       }
 
@@ -41,14 +37,15 @@ export async function POST(request: Request) {
 
         send("signing");
 
-        const transaction =
-          algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        const transaction = algosdk.makePaymentTxnWithSuggestedParamsFromObject(
+          {
             sender: agent.addr,
             receiver: merchant,
             amount,
             suggestedParams: await algod.getTransactionParams().do(),
             note: new TextEncoder().encode("AgentPay contract audit"),
-          });
+          },
+        );
 
         const signedTransaction = transaction.signTxn(agent.sk);
 
@@ -76,7 +73,9 @@ export async function POST(request: Request) {
           Number(payment?.amount) === amount;
 
         if (!verified) {
-          throw new Error("Payment confirmation did not match the required scan fee.");
+          throw new Error(
+            "Payment confirmation did not match the required scan fee.",
+          );
         }
 
         send("verified");
@@ -88,18 +87,46 @@ export async function POST(request: Request) {
 
         const ai = new GoogleGenAI({ apiKey });
 
-        const response = await ai.models.generateContent({
-          model: "gemini-3.6-flash",
-          contents: `Audit this Algorand TEAL or PyTeal contract.
+        const prompt = `Audit this contract.
 
 Give a short risk summary, then findings grouped by severity:
 Critical, High, Medium, Low, Informational.
-For each finding, explain the risk and a practical fix.
+
+For each finding:
+- Explain the security risk.
+- Explain why it matters.
+- Give a practical fix.
+
 Do not claim the code is completely safe.
 
 CONTRACT:
-${source}`,
-        });
+${source}`;
+
+        let response;
+        let lastError: unknown;
+
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            response = await ai.models.generateContent({
+              model: "gemini-3.6-flash",
+              contents: prompt,
+            });
+
+            break;
+          } catch (error) {
+            lastError = error;
+
+            if (attempt < 3) {
+              await new Promise((resolve) =>
+                setTimeout(resolve, attempt * 2000),
+              );
+            }
+          }
+        }
+
+        if (!response) {
+          throw lastError;
+        }
 
         send("complete", {
           report: response.text ?? "Gemini returned no audit report.",
