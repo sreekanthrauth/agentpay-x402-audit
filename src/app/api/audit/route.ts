@@ -89,52 +89,36 @@ export async function POST(request: Request) {
 
 
 
-        const prompt = `You are an AI assistant performing a defensive security review of smart contract source code provided by its developer.
+        const prompt = `Review this smart contract and identify obvious security risks or implementation mistakes.
 
-Review the submitted smart contract for potential security issues, logic errors, unsafe patterns, and implementation mistakes.
+First identify the smart contract language or ecosystem.
 
-The contract may be written in Solidity, TEAL, PyTeal, or another smart contract language. First identify the language and ecosystem from the code.
+Keep the review concise.
 
-This is a defensive code review. Do not provide instructions for exploiting, attacking, stealing funds from, or abusing a contract.
+Return:
 
-Return the report in this format:
+## What this contract does
+Briefly explain the purpose of the contract.
 
-## Contract Overview
-Briefly explain what the contract does and identify its language/ecosystem.
+## Potential issues
+List the most important issues you notice.
 
-## Risk Summary
-Give a short overall summary of the security and implementation risks found.
+For each issue include:
+- Severity: High, Medium, Low, or Informational
+- What the issue is
+- A short suggestion to improve it
 
-## Findings
+If you do not find an obvious issue, say that no obvious issue was identified during this automated review.
 
-Group findings by severity:
+Do not claim the contract is completely secure.
+This is a quick automated AI review, not a professional security audit.
 
-### Critical
-### High
-### Medium
-### Low
-### Informational
-
-For every finding include:
-
-- **Issue**
-- **Why it matters**
-- **Affected code or function**
-- **Recommended fix**
-
-If no issues are found for a severity level, say "No significant issues identified."
-
-Do not claim that the contract is completely safe.
-
-State that this is an automated AI review and not a replacement for a professional security audit.
-
-SMART CONTRACT SOURCE CODE:
+CONTRACT:
 
 ${source}`;
 
         const models = [
           "gemini-3.6-flash",
-          "gemini-2.5-flash",
         ];
 
         let response;
@@ -172,7 +156,7 @@ ${source}`;
         send("complete", {
           report: response.text ?? "AI returned no security report.",
         });
-        
+
       } catch (error) {
         send("error", {
           message: error instanceof Error ? error.message : "Audit failed.",

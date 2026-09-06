@@ -42,7 +42,7 @@ const stages = [
     key: "auditing",
     step: "06",
     icon: "✦",
-    title: "AI agent analyzing",
+    title: "AI analyzing",
     description: "The agent is reviewing your contract for risks.",
   },
   {
@@ -539,7 +539,7 @@ export default function Home() {
             </span>
 
             <h2>
-              Agent activity
+              Activity Flow
             </h2>
           </div>
 
@@ -697,11 +697,11 @@ export default function Home() {
 
             <div>
               <span className="section-label">
-                AI SECURITY REPORT
+                AI CONTRACT REVIEW
               </span>
 
               <h2>
-                Analysis complete.
+                Contract analysis complete.
               </h2>
 
               <p>
