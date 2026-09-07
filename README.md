@@ -34,11 +34,11 @@ If the hosted demo is temporarily unavailable, clone the repository and run it l
 
 ### Application Overview
 
-![AgentPay x402 Audit application overview](./public/screenshots/audit-workflow.png)
+![AgentPay x402 Audit application overview](https://raw.githubusercontent.com/sreekanthrauth/agentpay-x402-audit/main/public/screenshots/audit-workflow.png)
 
 ### Completed AI Security Review
 
-![Completed smart contract security review](./public/screenshots/security-review.png)
+![Completed smart contract security review](https://raw.githubusercontent.com/sreekanthrauth/agentpay-x402-audit/main/public/screenshots/security-review.png)
 
 ## Architecture
 
