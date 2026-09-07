@@ -40,81 +40,9 @@ If the hosted demo is temporarily unavailable, clone the repository and run it l
 
 ![Completed smart contract security review](https://raw.githubusercontent.com/sreekanthrauth/agentpay-x402-audit/main/public/screenshots/security-review.png)
 
-## Architecture
+## How It Works
 
-```text
-User
- │
- │ Submit smart contract
- ▼
-Next.js Frontend
- │
- │ POST /api/audit
- ▼
-Audit API
- │
- ├── Validate contract source
- │
- ├── Create payment transaction
- │
- ├── Sign transaction
- │
- ├── Broadcast to Algorand TestNet
- │
- ├── Wait for confirmation
- │
- └── Verify payment
-        │
-        ▼
- AI Provider Router
-        │
-        ├── Groq
-        │      │
-        │      └── Primary provider
-        │
-        ├── Gemini
-        │      │
-        │      └── Fallback
-        │
-        └── OpenRouter
-               │
-               └── Final fallback
-                      │
-                      ▼
-               AI Security Review
-                      │
-                      ▼
-             Server-Sent Events
-                      │
-                      ▼
-                  Frontend
-```
-
-## Workflow
-
-```text
-Smart Contract
-      ↓
-Audit Request
-      ↓
-Agent Payment
-      ↓
-Algorand TestNet
-      ↓
-Transaction Confirmation
-      ↓
-Payment Verification
-      ↓
-Groq
-  ↓ failure
-Gemini
-  ↓ failure
-OpenRouter
-      ↓
-AI Security Review
-      ↓
-Results Displayed
-```
+![AgentPay x402 Audit Flow](./public/screenshots/x402-flow.png)
 
 ## Features
 
