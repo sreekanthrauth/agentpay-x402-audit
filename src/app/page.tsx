@@ -54,6 +54,149 @@ const stages = [
   },
 ] as const;
 
+type AuditFinding = {
+  severity: string;
+  issue: string;
+  why: string;
+  fix: string;
+};
+
+function cleanAuditText(value: string) {
+  return value
+    .replace(/\*\*/g, "")
+    .replace(/`/g, "")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/^[-*]\s+/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function getAuditSection(
+  report: string,
+  heading: string,
+  nextHeadings: string[],
+) {
+  const start = report.search(
+    new RegExp(`^##\\s+${heading}\\s*$`, "im"),
+  );
+
+  if (start === -1) return "";
+
+  const afterHeading = report.slice(
+    start + report.slice(start).indexOf("\n") + 1,
+  );
+
+  let end = afterHeading.length;
+
+  for (const next of nextHeadings) {
+    const match = afterHeading.search(
+      new RegExp(`^##\\s+${next}\\s*$`, "im"),
+    );
+
+    if (match !== -1) {
+      end = Math.min(end, match);
+    }
+  }
+
+  return afterHeading.slice(0, end).trim();
+}
+
+function parseAuditReport(report: string) {
+  const overview = cleanAuditText(
+    getAuditSection(
+      report,
+      "Contract Overview",
+      ["Risk Summary", "Findings"],
+    ),
+  );
+
+  const riskSummary = cleanAuditText(
+    getAuditSection(
+      report,
+      "Risk Summary",
+      ["Findings"],
+    ),
+  );
+
+  const findingsSection = getAuditSection(
+    report,
+    "Findings",
+    [],
+  );
+
+  const findings: AuditFinding[] = findingsSection
+    .split("\n")
+    .filter(
+      (line) =>
+        line.trim().startsWith("|") &&
+        !line.includes("---") &&
+        !/severity\s*\|\s*issue/i.test(line),
+    )
+    .map((line) =>
+      line
+        .trim()
+        .split("|")
+        .slice(1, -1)
+        .map((cell) => cleanAuditText(cell)),
+    )
+    .filter((cells) => cells.length >= 4)
+    .map(([severity, issue, why, fix]) => ({
+      severity,
+      issue,
+      why,
+      fix,
+    }));
+
+  const conclusionMatch = findingsSection.match(
+    /\*{0,2}Conclusion:?\*{0,2}\s*([\s\S]*)$/i,
+  );
+
+  const conclusion = conclusionMatch
+    ? cleanAuditText(conclusionMatch[1])
+    : "";
+
+  return {
+    overview,
+    riskSummary,
+    findings,
+    conclusion,
+  };
+}
+
+function severityClass(severity: string) {
+  const normalized = severity.toLowerCase();
+
+  if (normalized.includes("critical")) return "critical";
+  if (normalized.includes("high")) return "high";
+  if (normalized.includes("medium")) return "medium";
+  if (normalized.includes("low")) return "low";
+
+  return "info";
+}
+
+function highestSeverity(findings: AuditFinding[]) {
+  const order = ["critical", "high", "medium", "low", "info"];
+
+  for (const level of order) {
+    if (
+      findings.some(
+        (finding) =>
+          severityClass(finding.severity) === level,
+      )
+    ) {
+      return level;
+    }
+  }
+
+  return "info";
+}
+
+function severityLabel(level: string) {
+  return level === "info"
+    ? "Informational"
+    : level.charAt(0).toUpperCase() + level.slice(1);
+}
+
 export default function Home() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [source, setSource] = useState("");
@@ -68,6 +211,10 @@ export default function Home() {
   } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [aiProvider, setAiProvider] = useState("");
+  const [aiEstimate, setAiEstimate] = useState("");
+  const [aiDuration, setAiDuration] = useState("");
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -84,6 +231,9 @@ export default function Home() {
     setReport("");
     setError("");
     setTx(null);
+    setAiProvider("");
+    setAiEstimate("");
+    setAiDuration("");
 
     try {
       const response = await fetch("/api/audit", {
@@ -129,34 +279,59 @@ export default function Home() {
             throw new Error(data.message);
           }
 
+          if (data.event === "submitted") {
+            setTx({
+              id: data.transactionId,
+              url: data.explorerUrl,
+            });
+          }
+
+          if (data.event === "auditing") {
+            setActive("auditing");
+
+            setAiProvider(data.provider ?? "");
+            setAiEstimate(data.estimate ?? "");
+
+            setStatus(
+              data.provider
+                ? `Analyzing with ${data.provider}...`
+                : "AI analyzing...",
+            );
+
+            continue;
+          }
+
+          if (data.event === "switching") {
+            setActive("auditing");
+
+            setAiProvider(data.provider ?? "");
+            setAiEstimate(data.estimate ?? "");
+
+            setStatus(
+              data.message ??
+              `Switching to ${data.provider}...`,
+            );
+
+            continue;
+          }
+
           if (data.event !== "submitted") {
             setActive(data.event);
           }
 
-          if (data.event === "submitted") {
-            setTx({
-              id: data.transactionId,
-              url: data.explorerUrl,
-            });
-          }
-
           const currentStage = stages.find(
-            (stage) => stage.key === data.event
+            (stage) => stage.key === data.event,
           );
 
           setStatus(
-            currentStage?.title ?? "Processing..."
+            currentStage?.title ?? "Processing...",
           );
-
-          if (data.event === "submitted") {
-            setTx({
-              id: data.transactionId,
-              url: data.explorerUrl,
-            });
-          }
 
           if (data.event === "complete") {
             setReport(data.report);
+            setAiProvider(data.provider ?? "");
+            setAiDuration(data.duration ?? "");
+            setStatus("Security findings ready");
           }
         }
       }
@@ -178,6 +353,14 @@ export default function Home() {
   );
 
   const hasContract = source.trim().length > 0;
+
+  const parsedReport = report
+    ? parseAuditReport(report)
+    : null;
+
+  const reportRiskLevel = parsedReport
+    ? highestSeverity(parsedReport.findings)
+    : "info";
 
   const workflowProgress =
     activeIndex >= 0
@@ -238,14 +421,19 @@ export default function Home() {
           AI SMART CONTRACT SECURITY
         </div>
 
-        <h1>
-          Paste a Smart Contract
-          <br />
-          <span>Get a security review.</span>
+        <h1 className="hero-title">
+          <span className="hero-title-main">
+            Paste a Smart Contract,
+          </span>
+
+          <span className="hero-title-accent">
+            Get a security review.
+          </span>
         </h1>
 
+
         <p className="hero-description">
-          Submit your smart contract for an AI-powered security review. An AI agent handles the USDC payment, which is verified on Algorand TestNet.
+          Submit your smart contract for an AI-powered security review. An AI agent handles the audit payment, which is verified on Algorand TestNet.
         </p>
 
         <div className="trust-row">
@@ -305,7 +493,7 @@ export default function Home() {
 
             <div className="step-number">02</div>
 
-            <h3>AI Agent Pays in USDC</h3>
+            <h3>Agent Pays for Audit</h3>
 
             <p>
               The AI agent initiates payment for the contract review.
@@ -322,7 +510,7 @@ export default function Home() {
             <h3>Payment Verified on Algorand</h3>
 
             <p>
-              The facilitator verifies the payment on-chain.
+              The payment is confirmed and verified on-chain.
             </p>
           </div>
 
@@ -670,6 +858,38 @@ export default function Home() {
 
       </section>
 
+      {loading && aiProvider && (
+        <section className="ai-review-status">
+          <div className="ai-review-status-icon">
+            ✦
+          </div>
+
+          <div className="ai-review-status-content">
+            <small>AI SECURITY REVIEW</small>
+
+            <strong>
+              Analyzing with {aiProvider}
+            </strong>
+
+            <p>
+              {aiEstimate ||
+                "Preparing your contract-specific security review."}
+            </p>
+          </div>
+
+          <div className="ai-review-side">
+            <span className="ai-review-provider">
+              {aiProvider}
+            </span>
+
+            <div className="ai-review-live">
+              <span />
+              LIVE
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ERROR */}
 
       {error && (
@@ -694,31 +914,235 @@ export default function Home() {
         <section className="report">
 
           <div className="report-header">
+            <div className="report-heading">
+              <div className="report-kicker">
+                <span className="report-kicker-icon">
+                  ✦
+                </span>
 
-            <div>
-              <span className="section-label">
-                AI CONTRACT REVIEW
-              </span>
+                AI SECURITY REVIEW
+              </div>
 
               <h2>
-                Contract analysis complete.
+                Security review ready.
               </h2>
 
               <p>
-                Your contract has completed the
-                automated security workflow.
+                A concise AI-assisted review of the submitted
+                smart contract.
               </p>
+
+              <div className="review-meta">
+                {aiProvider && (
+                  <span className="review-meta-item">
+                    <b>✦</b>
+                    {aiProvider}
+                  </span>
+                )}
+
+                {aiDuration && (
+                  <span className="review-meta-item">
+                    <b>✓</b>
+                    {aiDuration}
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="success-check">
-              ✓
+            <div className="report-status">
+              <div className="success-check">
+                ✓
+              </div>
+
+              <span>
+                REVIEW COMPLETE
+              </span>
             </div>
-
           </div>
 
-          <div className="report-content">
-            <pre>{report}</pre>
-          </div>
+          {parsedReport?.findings.length ? (
+            <>
+              <section className="report-summary-strip">
+                <div className="summary-item">
+                  <span className="summary-label">
+                    FINDINGS
+                  </span>
+
+                  <strong>
+                    {parsedReport.findings.length}
+                    <em>
+                      {parsedReport.findings.length === 1
+                        ? " item to review"
+                        : " items to review"}
+                    </em>
+                  </strong>
+                </div>
+
+                <div className="summary-divider" />
+
+                <div className="summary-item">
+                  <span className="summary-label">
+                    HIGHEST RISK
+                  </span>
+
+                  <strong
+                    className={`summary-risk ${reportRiskLevel}`}
+                  >
+                    {severityLabel(reportRiskLevel)}
+                  </strong>
+                </div>
+              </section>
+
+              <section className="report-grid">
+                {parsedReport.overview && (
+                  <article className="report-panel">
+                    <div className="report-panel-heading">
+                      <span className="panel-icon">
+                        ⌘
+                      </span>
+
+                      <div>
+                        <small>
+                          CONTRACT OVERVIEW
+                        </small>
+
+                        <h3>
+                          What it does
+                        </h3>
+                      </div>
+                    </div>
+
+                    <p>
+                      {parsedReport.overview}
+                    </p>
+                  </article>
+                )}
+
+                {parsedReport.riskSummary && (
+                  <article className="report-panel">
+                    <div className="report-panel-heading">
+                      <span className="panel-icon">
+                        ◌
+                      </span>
+
+                      <div>
+                        <small>
+                          RISK SUMMARY
+                        </small>
+
+                        <h3>
+                          What to watch
+                        </h3>
+                      </div>
+                    </div>
+
+                    <p>
+                      {parsedReport.riskSummary}
+                    </p>
+                  </article>
+                )}
+              </section>
+
+              <section className="findings-section">
+                <div className="findings-heading">
+                  <div>
+                    <span className="section-label">
+                      SECURITY FINDINGS
+                    </span>
+
+                    <h3>
+                      Review these items
+                    </h3>
+                  </div>
+
+                  <span className="findings-count">
+                    {parsedReport.findings.length}
+                  </span>
+                </div>
+
+                <div className="finding-list">
+                  {parsedReport.findings.map(
+                    (finding, index) => (
+                      <article
+                        className="finding-card"
+                        key={`${finding.issue}-${index}`}
+                      >
+                        <div className="finding-top">
+                          <span
+                            className={`severity-badge ${severityClass(
+                              finding.severity,
+                            )}`}
+                          >
+                            {finding.severity}
+                          </span>
+
+                          <span className="finding-index">
+                            {String(index + 1).padStart(
+                              2,
+                              "0",
+                            )}
+                          </span>
+                        </div>
+
+                        <h4>
+                          {finding.issue}
+                        </h4>
+
+                        <div className="finding-details">
+                          <div>
+                            <span>
+                              WHY IT MATTERS
+                            </span>
+
+                            <p>
+                              {finding.why}
+                            </p>
+                          </div>
+
+                          <div>
+                            <span>
+                              SUGGESTED FIX
+                            </span>
+
+                            <p>
+                              {finding.fix}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
+                    ),
+                  )}
+                </div>
+              </section>
+
+              {parsedReport.conclusion && (
+                <section className="conclusion-card">
+                  <div className="conclusion-icon">
+                    ✓
+                  </div>
+
+                  <div>
+                    <span>
+                      REVIEW NOTE
+                    </span>
+
+                    <p>
+                      {parsedReport.conclusion}
+                    </p>
+                  </div>
+                </section>
+              )}
+            </>
+          ) : (
+            <div className="report-content">
+              <pre>{report}</pre>
+            </div>
+          )}
+
+          <p className="report-disclaimer">
+            Automated AI-assisted review only. The absence
+            of findings does not mean a contract is secure.
+          </p>
 
         </section>
       )}
