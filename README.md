@@ -10,24 +10,35 @@
 
 AgentPay x402 Audit is an experimental application that combines:
 
-* AI-assisted smart contract security review
-* Agent-managed blockchain payments
-* Algorand TestNet payment verification
-* Multi-provider AI fallback
-* Real-time workflow updates
+- AI-assisted smart contract security review
+- Agent-managed blockchain payments
+- Algorand TestNet payment verification
+- Multi-provider AI fallback
+- Real-time workflow updates
 
-A user submits smart contract source code. The backend executes a payment workflow, verifies the transaction on Algorand TestNet, and then sends the contract to an AI provider for security analysis.
+A user submits smart contract source code.
+
+The backend executes a payment workflow, verifies the transaction on Algorand TestNet, and then sends the contract to an AI provider for security analysis.
+
+## Live Demo
+
+**Try the application:**
+
+[https://agentpay-x402-audit.onrender.com/](https://agentpay-x402-audit.onrender.com/)
+
+> The hosted demo depends on external AI providers and blockchain services. Free API tiers may occasionally experience rate limits, cold starts, or temporary availability issues.
+
+If the hosted demo is temporarily unavailable, clone the repository and run it locally using your own environment variables.
 
 ## Screenshots
 
 ### Application Overview
 
-![AgentPay x402 Audit application overview](./public/screenshots/app-overview.png)
+![AgentPay x402 Audit application overview](./public/screenshots/audit-workflow.png)
 
 ### Completed AI Security Review
 
-![Completed smart contract security review](./public/screenshots/audit-complete.png)
-
+![Completed smart contract security review](./public/screenshots/security-review.png)
 
 ## Architecture
 
@@ -68,14 +79,14 @@ Audit API
         └── OpenRouter
                │
                └── Final fallback
-                       │
-                       ▼
+                      │
+                      ▼
                AI Security Review
-                       │
-                       ▼
-              Server-Sent Events
-                       │
-                       ▼
+                      │
+                      ▼
+             Server-Sent Events
+                      │
+                      ▼
                   Frontend
 ```
 
@@ -107,46 +118,46 @@ Results Displayed
 
 ## Features
 
-* AI-assisted smart contract review
-* Automated payment transaction creation
-* Algorand TestNet integration
-* On-chain payment verification
-* Multi-provider AI fallback
-* Groq as the primary AI provider
-* Gemini as a backup provider
-* OpenRouter as a final fallback
-* Server-Sent Events for live workflow updates
-* Real-time audit progress
-* Estimated AI review time
-* Actual AI review duration
-* Transaction explorer links
-* Structured security findings
+- AI-assisted smart contract review
+- Automated payment transaction creation
+- Algorand TestNet integration
+- On-chain payment verification
+- Multi-provider AI fallback
+- Groq as the primary AI provider
+- Gemini as a backup provider
+- OpenRouter as a final fallback
+- Server-Sent Events for live workflow updates
+- Real-time audit progress
+- Estimated AI review time
+- Actual AI review duration
+- Transaction explorer links
+- Structured security findings
 
 ## Tech Stack
 
 ### Frontend
 
-* Next.js
-* React
-* TypeScript
-* CSS
+- Next.js
+- React
+- TypeScript
+- CSS
 
 ### Backend
 
-* Next.js Route Handlers
-* Server-Sent Events
+- Next.js Route Handlers
+- Server-Sent Events
 
 ### Blockchain
 
-* Algorand TestNet
-* Algorand SDK
-* AlgoNode API
+- Algorand TestNet
+- Algorand SDK
+- AlgoNode API
 
 ### AI Providers
 
-* Groq
-* Google Gemini
-* OpenRouter
+- Groq
+- Google Gemini
+- OpenRouter
 
 ## Run Locally
 
@@ -170,7 +181,7 @@ npm install
 
 ### 4. Create your environment file
 
-Copy `.env.example` and rename it to:
+Copy `.env.example` and rename the copy to:
 
 ```text
 .env.local
@@ -210,24 +221,24 @@ MERCHANT_ADDRESS=
 SERVICE_PRICE_MICROALGOS=100000
 ```
 
-> Never commit your `.env.local` file or private keys.
+> Never commit your `.env.local` file, wallet mnemonic, private keys, or API keys.
 
 ## AI Provider Strategy
 
 External AI providers can experience:
 
-* Rate limits
-* Temporary outages
-* Model availability changes
-* API quota limits
+- Rate limits
+- Temporary outages
+- Model availability changes
+- API quota limits
 
 The application uses a sequential fallback strategy:
 
 ```text
 Groq
-  ↓ unavailable
+ ↓ unavailable
 Gemini
-  ↓ unavailable
+ ↓ unavailable
 OpenRouter
 ```
 
@@ -267,10 +278,10 @@ The backend waits for blockchain confirmation and verifies the transaction detai
 
 The verification checks:
 
-* Transaction confirmation
-* Payment sender
-* Payment receiver
-* Payment amount
+- Transaction confirmation
+- Payment sender
+- Payment receiver
+- Payment amount
 
 Only after successful verification does the AI audit workflow begin.
 
@@ -287,6 +298,11 @@ agentpay-x402-audit/
 ├── tsconfig.json
 ├── next.config.ts
 ├── next-env.d.ts
+│
+├── public/
+│   └── screenshots/
+│       ├── audit-workflow.png
+│       └── security-review.png
 │
 └── src/
     └── app/
@@ -337,10 +353,10 @@ This project is an experimental demonstration.
 
 The AI-generated review:
 
-* Is not a professional smart contract audit
-* Can miss vulnerabilities
-* Can produce incorrect findings
-* Should not be the only security review before deploying production contracts
+- Is not a professional smart contract audit
+- Can miss vulnerabilities
+- Can produce incorrect findings
+- Should not be the only security review before deploying production contracts
 
 AI API keys and wallet mnemonics must remain private.
 
@@ -352,18 +368,6 @@ Private keys
 Wallet mnemonics
 API keys
 ```
-
-## Live Demo
-
-A live demo URL will be added here:
-
-```text
-YOUR_DEPLOYMENT_URL
-```
-
-> The hosted demo depends on external AI providers and blockchain services. Free API tiers may occasionally experience rate limits or temporary availability issues.
-
-If the hosted demo is temporarily unavailable, clone the repository and run it locally using your own environment variables.
 
 ## Inspiration
 
