@@ -30,6 +30,11 @@ The backend executes a payment workflow, verifies the transaction on Algorand Te
 
 If the hosted demo is temporarily unavailable, clone the repository and run it locally using your own environment variables.
 
+## How It Works
+
+![AgentPay x402 Audit Flow](./public/screenshots/x402-flow.png)
+
+
 ## Screenshots
 
 ### Application Overview
@@ -40,9 +45,6 @@ If the hosted demo is temporarily unavailable, clone the repository and run it l
 
 ![Completed smart contract security review](https://raw.githubusercontent.com/sreekanthrauth/agentpay-x402-audit/main/public/screenshots/security-review.png)
 
-## How It Works
-
-![AgentPay x402 Audit Flow](./public/screenshots/x402-flow.png)
 
 ## Features
 
